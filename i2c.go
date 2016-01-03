@@ -70,6 +70,22 @@ func (b *Bus) ReadWordFromReg(addr, reg byte) (uint16, error) {
 	return ((leValue >> 8) | (leValue << 8)), err
 }
 
+// ReadSliceFromReg reads an undefined number of bytes
+func (b *Bus) ReadSliceFromReg(addr, reg byte, value []byte) (int, error) {
+	b.opLock.Lock()
+	defer b.opLock.Unlock()
+	if err := b.setRemoteAddress(addr); err != nil {
+		return 0, err
+	}
+	if len(value) > C.I2C_SMBUS_BLOCK_MAX {
+		// TODO: issue a warning or something.
+	}
+	size, err := C.i2c_smbus_read_i2c_block_data(C.int(b.file.Fd()),
+		C.__u8(reg), C.__u8(len(value)), (*C.__u8)(&value[0]))
+	log.Printf(i2cLogFormat, "recv", addr, reg, value, err)
+	return int(size), err
+}
+
 // WriteByteToReg writes 1 byte to a register of a slave device
 func (b *Bus) WriteByteToReg(addr, reg, value byte) error {
 	b.opLock.Lock()
