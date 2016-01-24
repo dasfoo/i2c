@@ -1,8 +1,6 @@
 package i2c
 
-/*
-#include <linux/i2c-dev.h>
-*/
+// #include <linux/i2c-dev.h>
 import "C"
 
 import (
@@ -20,6 +18,7 @@ type Bus struct {
 	file          *os.File
 	opLock        sync.Mutex
 	remoteAddress byte
+	Log           func(string, ...interface{})
 }
 
 // NewBus opens a Linux i2c bus file
@@ -31,7 +30,10 @@ func NewBus(id byte) (*Bus, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Bus{file: file}, nil
+	return &Bus{
+		file: file,
+		Log:  log.Printf,
+	}, nil
 }
 
 func (b *Bus) setRemoteAddress(addr byte) error {
@@ -53,7 +55,7 @@ func (b *Bus) ReadByteFromReg(addr, reg byte) (byte, error) {
 		return 0, err
 	}
 	value, err := C.i2c_smbus_read_byte_data(C.int(b.file.Fd()), C.__u8(reg))
-	log.Printf(i2cLogFormat, "recv", addr, reg, value, err)
+	b.Log(i2cLogFormat, "recv", addr, reg, value, err)
 	return byte(value), err
 }
 
@@ -65,7 +67,7 @@ func (b *Bus) ReadWordFromReg(addr, reg byte) (uint16, error) {
 		return 0, err
 	}
 	value, err := C.i2c_smbus_read_word_data(C.int(b.file.Fd()), C.__u8(reg))
-	log.Printf(i2cLogFormat, "recv", addr, reg, value, err)
+	b.Log(i2cLogFormat, "recv", addr, reg, value, err)
 	leValue := uint16(value) // big endian yet
 	return ((leValue >> 8) | (leValue << 8)), err
 }
@@ -82,7 +84,7 @@ func (b *Bus) ReadSliceFromReg(addr, reg byte, value []byte) (int, error) {
 	}
 	size, err := C.i2c_smbus_read_i2c_block_data(C.int(b.file.Fd()),
 		C.__u8(reg), C.__u8(len(value)), (*C.__u8)(&value[0]))
-	log.Printf(i2cLogFormat, "recv", addr, reg, value, err)
+	b.Log(i2cLogFormat, "recv", addr, reg, value, err)
 	return int(size), err
 }
 
@@ -95,7 +97,7 @@ func (b *Bus) WriteByteToReg(addr, reg, value byte) error {
 	}
 	_, err := C.i2c_smbus_write_byte_data(C.int(b.file.Fd()), C.__u8(reg),
 		C.__u8(value))
-	log.Printf(i2cLogFormat, "send", addr, reg, value, err)
+	b.Log(i2cLogFormat, "send", addr, reg, value, err)
 	return err
 }
 
