@@ -21,6 +21,7 @@ type Bus interface {
 	ReadByteFromReg(byte, byte) (byte, error)
 	ReadWordFromReg(byte, byte) (uint16, error)
 	ReadSliceFromReg(byte, byte, []byte) (int, error)
+	WriteSliceToReg(byte, byte, []byte) (int, error)
 	WriteByteToReg(byte, byte, byte) error
 	SetLogger(Logger)
 	Close() error
@@ -97,6 +98,22 @@ func (b *bus) ReadSliceFromReg(addr, reg byte, value []byte) (int, error) {
 	size, err := C.i2c_smbus_read_i2c_block_data(C.int(b.file.Fd()),
 		C.__u8(reg), C.__u8(len(value)), (*C.__u8)(&value[0]))
 	b.logger(i2cLogFormat, "recv", addr, reg, value, err)
+	return int(size), err
+}
+
+// WriteSliceToReg writes a defined number of bytes
+func (b *bus) WriteSliceToReg(addr, reg byte, value []byte) (int, error) {
+	b.opLock.Lock()
+	defer b.opLock.Unlock()
+	if err := b.setRemoteAddress(addr); err != nil {
+		return 0, err
+	}
+	if len(value) > C.I2C_SMBUS_BLOCK_MAX {
+		// TODO: issue a warning or something.
+	}
+	size, err := C.i2c_smbus_write_i2c_block_data(C.int(b.file.Fd()),
+		C.__u8(reg), C.__u8(len(value)), (*C.__u8)(&value[0]))
+	b.logger(i2cLogFormat, "send", addr, reg, value, err)
 	return int(size), err
 }
 
