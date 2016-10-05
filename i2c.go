@@ -1,6 +1,8 @@
 package i2c
 
-// #include <linux/i2c-dev.h>
+// Workaround for i2c-dev divergence not applying to cross-compilation subdir.
+
+// #include "/usr/include/linux/i2c-dev.h"
 import "C"
 
 import (
