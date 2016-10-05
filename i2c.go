@@ -1,7 +1,9 @@
 package i2c
 
+// Workaround for i2c-dev.h using NULL without including stddef.h.
 // Workaround for i2c-dev divergence not applying to cross-compilation subdir.
 
+// #include <stddef.h>
 // #include "/usr/include/linux/i2c-dev.h"
 import "C"
 
